@@ -57,7 +57,7 @@
     module.exports = DB;
 
 }(typeof global !== 'undefined' ? global : /* istanbul ignore next */ this));
-
+/*
         each: function(fn, context) {
             return this.db.each(fn, context);
         },
@@ -88,3 +88,4 @@
         destroy: function() {
             this.db.destroy();
         }
+*/
