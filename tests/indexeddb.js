@@ -1,5 +1,6 @@
-/*global describe, it, before, after */
+/*global describe, it, before, after, afterEach, beforeEach */
 /*jshint unused:false */
+(function (window) {
 
 "use strict";
 
@@ -14,20 +15,7 @@ var chai = require('chai'),
     tables = [
         {
             name: 'presidents',
-            indexes: [
-                {
-                    property: 'name',
-                    config: {
-                        unique: false
-                    }
-                },
-                {
-                    property: 'birth',
-                    config: {
-                        unique: false
-                    }
-                }
-            ]
+            indexes: ['name', 'birth']
         }
     ];
 
@@ -145,6 +133,10 @@ describe('indexedDB.readMany', function () {
         return db.read('presidents', 'birth', [1900,1901]).should.become(undefined);
     });
 
+    it('Read non-indexed items', function () {
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
+        return db.readMany('presidents', 'lastName', ['Kennedy','Clinton']).should.become([{name: 'John F.', lastName: 'Kennedy', 'birth': 1917},{name: 'Bill', lastName: 'Clinton', 'birth': 1946}]);
+    });
 });
 
 describe('indexedDB.readAll', function () {
@@ -182,7 +174,7 @@ describe('indexedDB.readAll', function () {
 
 describe('indexedDB.delete', function () {
 
-    before(function(done) {
+    beforeEach(function(done) {
         var db = new IndexedDB(databaseName, databaseVersion, tables),
             hash = [];
         hash.push(db.save('presidents', {name: 'Barack', lastName: 'Obama', 'birth': 1961}));
@@ -201,10 +193,17 @@ describe('indexedDB.delete', function () {
         });
     });
 
-    it('delete one valid item', function () {
+    it('delete one valid item check size', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
         return db.delete('presidents', 'birth', 1946).then(function() {
             return db.size('presidents').should.become(3);
+        });
+    });
+
+    it('delete one valid item check item', function () {
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
+        return db.delete('presidents', 'birth', 1946).then(function() {
+            return db.read('presidents', 'birth', 1946).should.become(undefined);
         });
     });
 
@@ -218,7 +217,7 @@ describe('indexedDB.delete', function () {
     it('delete one valid item that is not present', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
         return db.delete('presidents', 'birth', 1900).then(function() {
-            return db.size('presidents').should.become(0);
+            return db.size('presidents').should.become(4);
         });
     });
 
@@ -287,14 +286,31 @@ describe('Other methods', function () {
         });
     });
 
-    it('each', function () {
-        var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', 43).should.become({name: 'Marco', lastName: 'Asbreuk', 'birth': 43});
+    it('each', function (done) {
+        var db = new IndexedDB(databaseName, databaseVersion, tables),
+            years = 0;
+        db.each('presidents', function(record) {
+            years += record.birth;
+        }).finally(function() {
+            expect(years).to.be.equal(7741);
+            done();
+        }).catch(function(err) {
+            done(err);
+        });
     });
 
-    it('some', function () {
-        var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', 10).should.become(undefined);
+    it('some', function (done) {
+        var db = new IndexedDB(databaseName, databaseVersion, tables),
+            years = 0;
+        db.some('presidents', function(record) {
+            years += record.birth;
+            return (record.birth===1917);
+        }).finally(function(record) {
+            expect(years).to.be.equal(3878);
+            done();
+        }).catch(function(err) {
+            done(err);
+        });
     });
 
     it('has when true', function () {
@@ -313,3 +329,6 @@ describe('Other methods', function () {
     });
 
 });
+
+
+}(global.window || require('node-win')));
