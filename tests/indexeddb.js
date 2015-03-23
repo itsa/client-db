@@ -11,11 +11,22 @@ var chai = require('chai'),
     should = chai.should(),
     IndexedDB = require('../lib/indexeddb.js'),
     databaseName = 'test',
+    databaseName2 = 'test2',
+    databaseName3 = 'test3',
     databaseVersion = 1,
+    databaseVersion2 = 2,
+    databaseVersion3 = 3,
     tables = [
         {
             name: 'presidents',
             indexes: ['name', 'birth']
+        }
+    ],
+    tablesUnique = [
+        {
+            name: 'presidents',
+            uniqueIndexes: ['name'],
+            indexes: ['birth']
         }
     ];
 
@@ -25,7 +36,7 @@ chai.use(require('chai-as-promised'));
 describe('indexedDB.save', function () {
 
     after(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
@@ -54,7 +65,7 @@ describe('indexedDB.read', function () {
     });
 
     after(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
@@ -82,6 +93,102 @@ describe('indexedDB.read', function () {
 
 });
 
+describe('indexedDB.readwith unique indexes', function () {
+
+    before(function(done) {
+        var db, hash = [], prevErrorHandler;
+        // NOTE: db.save() double unique index will cause an error caught by Mocha, even if it was handled
+        // by the promise. Therefore we temporarely suppress mocha's general errorhandling and reset it afterwards:
+        prevErrorHandler = window.onerror;
+        window.onerror = function(){return true;};
+        db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        hash.push(db.save('presidents', {name: 'Barack', lastName: 'Obama', 'birth': 1961}));
+        hash.push(db.save('presidents', {name: 'John F.', lastName: 'Kennedy', 'birth': 1917}));
+        hash.push(db.save('presidents', {name: 'John F.', lastName: 'Kennedy another', 'birth': 1917}));
+        hash.push(db.save('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1946}));
+        window.Promise.finishAll(hash).finally(function() {
+            window.onerror = prevErrorHandler;
+            done();
+        });
+    });
+
+    after(function(done) {
+        var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        db.deleteDatabase().finally(function() {
+            done();
+        });
+    });
+
+    it('Read record with indexed key', function () {
+        var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        return db.read('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
+    });
+
+    it('Read record with unique-indexed key', function () {
+        var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        return db.read('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
+    });
+
+    it('Read size', function () {
+        var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        return db.size('presidents').should.become(3);
+    });
+
+    it('Read many records search hits on unique items', function () {
+        var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
+        return db.readMany('presidents', 'birth', 1917).should.become([{name: 'John F.', lastName: 'Kennedy', 'birth': 1917}]);
+    });
+
+});
+
+describe('indexedDB.readwith unique indexes force overwrite', function () {
+
+    before(function(done) {
+        var db, hash = [], prevErrorHandler;
+        // NOTE: db.save() double unique index will cause an error caught by Mocha, even if it was handled
+        // by the promise. Therefore we temporarely suppress mocha's general errorhandling and reset it afterwards:
+        prevErrorHandler = window.onerror;
+        window.onerror = function(){return true;};
+        db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        hash.push(db.save('presidents', {name: 'Barack', lastName: 'Obama', 'birth': 1961}));
+        hash.push(db.save('presidents', {name: 'John F.', lastName: 'Kennedy', 'birth': 1917}));
+        hash.push(db.save('presidents', {name: 'John F.', lastName: 'Kennedy another', 'birth': 1917}, true));
+        hash.push(db.save('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1946}));
+        window.Promise.finishAll(hash).finally(function() {
+            window.onerror = prevErrorHandler;
+            done();
+        });
+    });
+
+    after(function(done) {
+        var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        db.deleteDatabase().finally(function() {
+            done();
+        });
+    });
+
+    it('Read record with indexed key', function () {
+        var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        return db.read('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
+    });
+
+    it('Read record with unique-indexed key', function () {
+        var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        return db.read('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
+    });
+
+    it('Read size', function () {
+        var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        return db.size('presidents').should.become(3);
+    });
+
+    it('Read many records search hits on unique items', function () {
+        var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
+        return db.readMany('presidents', 'birth', 1917).should.become([{name: 'John F.', lastName: 'Kennedy another', 'birth': 1917}]);
+    });
+
+});
+
 describe('indexedDB.readMany', function () {
 
     before(function(done) {
@@ -97,7 +204,7 @@ describe('indexedDB.readMany', function () {
     });
 
     after(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
@@ -154,7 +261,7 @@ describe('indexedDB.readAll', function () {
     });
 
     afterEach(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
@@ -187,7 +294,7 @@ describe('indexedDB.delete', function () {
     });
 
     afterEach(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
@@ -273,7 +380,7 @@ describe('Other methods', function () {
     });
 
     afterEach(function(done) {
-        var db = new IndexedDB(databaseName, databaseVersion);
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
         db.deleteDatabase().finally(function() {
             done();
         });
