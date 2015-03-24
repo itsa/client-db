@@ -50,7 +50,7 @@ describe('indexedDB.save', function () {
 });
 
 
-describe('indexedDB.read', function () {
+describe('indexedDB.readOneByKey', function () {
 
     before(function(done) {
         var db = new IndexedDB(databaseName, databaseVersion, tables),
@@ -73,22 +73,22 @@ describe('indexedDB.read', function () {
 
     it('Read record search single with hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', 1961).should.become({name: 'Barack', lastName: 'Obama', 'birth': 1961});
+        return db.readOneByKey('presidents', 'birth', 1961).should.become({name: 'Barack', lastName: 'Obama', 'birth': 1961});
     });
 
     it('Read record search single without hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', 1900).should.become(undefined);
+        return db.readOneByKey('presidents', 'birth', 1900).should.become(undefined);
     });
 
     it('Read record search multiple with hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', [1960,1961,1962]).should.become({name: 'Barack', lastName: 'Obama', 'birth': 1961});
+        return db.readOneByKey('presidents', 'birth', [1960,1961,1962]).should.become({name: 'Barack', lastName: 'Obama', 'birth': 1961});
     });
 
     it('Read record search multiple without hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', [1900,1901,1902]).should.become(undefined);
+        return db.readOneByKey('presidents', 'birth', [1900,1901,1902]).should.become(undefined);
     });
 
 });
@@ -121,12 +121,12 @@ describe('indexedDB.readwith unique indexes', function () {
 
     it('Read record with indexed key', function () {
         var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
-        return db.read('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
+        return db.readOneByKey('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
     });
 
     it('Read record with unique-indexed key', function () {
         var db = new IndexedDB(databaseName2, databaseVersion2, tablesUnique);
-        return db.read('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
+        return db.readOneByKey('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
     });
 
     it('Read size', function () {
@@ -169,12 +169,12 @@ describe('indexedDB.readwith unique indexes force overwrite', function () {
 
     it('Read record with indexed key', function () {
         var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
-        return db.read('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
+        return db.readOneByKey('presidents', 'birth', 1917).should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
     });
 
     it('Read record with unique-indexed key', function () {
         var db = new IndexedDB(databaseName3, databaseVersion3, tablesUnique);
-        return db.read('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
+        return db.readOneByKey('presidents', 'name', 'John F.').should.become({name: 'John F.', lastName: 'Kennedy another', 'birth': 1917});
     });
 
     it('Read size', function () {
@@ -222,7 +222,7 @@ describe('indexedDB.readMany', function () {
 
     it('Read record search single without hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', 1900).should.become(undefined);
+        return db.readOneByKey('presidents', 'birth', 1900).should.become(undefined);
     });
 
     it('Read record search multiple with one hit', function () {
@@ -237,7 +237,7 @@ describe('indexedDB.readMany', function () {
 
     it('Read record search multiple without hit', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
-        return db.read('presidents', 'birth', [1900,1901]).should.become(undefined);
+        return db.readOneByKey('presidents', 'birth', [1900,1901]).should.become(undefined);
     });
 
     it('Read non-indexed items', function () {
@@ -310,7 +310,7 @@ describe('indexedDB.delete', function () {
     it('delete one valid item check item', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
         return db.delete('presidents', 'birth', 1946).then(function() {
-            return db.read('presidents', 'birth', 1946).should.become(undefined);
+            return db.readOneByKey('presidents', 'birth', 1946).should.become(undefined);
         });
     });
 
@@ -428,6 +428,16 @@ describe('Other methods', function () {
     it('has when false', function () {
         var db = new IndexedDB(databaseName, databaseVersion, tables);
         return db.has('presidents', 'birth', 1900).should.become(false);
+    });
+
+    it('contains when true', function () {
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
+        return db.contains('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1946}).should.become(true);
+    });
+
+    it('contains when false', function () {
+        var db = new IndexedDB(databaseName, databaseVersion, tables);
+        return db.has('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1900}).should.become(false);
     });
 
     it('size', function () {
