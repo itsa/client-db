@@ -468,9 +468,14 @@ describe('Other methods', function () {
         return db.has('presidents', 'birth', 1917).should.become(true);
     });
 
-    it('has when false', function () {
+    it('has when true compared multiple', function () {
         var db = new DB(databaseName, databaseVersion, tables);
-        return db.has('presidents', 'birth', 1900).should.become(false);
+        return db.has('presidents', 'birth', [1917, 1999]).should.become(true);
+    });
+
+    it('has when false compared multiple', function () {
+        var db = new DB(databaseName, databaseVersion, tables);
+        return db.has('presidents', 'birth', [1900, 1901]).should.become(false);
     });
 
     it('contains when true', function () {
@@ -480,7 +485,7 @@ describe('Other methods', function () {
 
     it('contains when false', function () {
         var db = new DB(databaseName, databaseVersion, tables);
-        return db.has('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1900}).should.become(false);
+        return db.contains('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1900}).should.become(false);
     });
 
     it('size', function () {

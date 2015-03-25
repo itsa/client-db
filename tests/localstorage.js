@@ -409,6 +409,7 @@ describe('Other methods', function () {
             return (record.birth===1917);
         }).finally(function(record) {
             expect(years).to.be.equal(3878);
+            expect(record).to.be.eql({name: 'John F.', lastName: 'Kennedy', 'birth': 1917});
             done();
         }).catch(function(err) {
             done(err);
@@ -432,7 +433,7 @@ describe('Other methods', function () {
 
     it('contains when false', function () {
         var db = new LocalStorage(databaseName, databaseVersion, tables);
-        return db.has('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1900}).should.become(false);
+        return db.contains('presidents', {name: 'Bill', lastName: 'Clinton', 'birth': 1900}).should.become(false);
     });
 
     it('size', function () {
